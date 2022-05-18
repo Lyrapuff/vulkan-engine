@@ -1,0 +1,12 @@
+[package]
+name = "vulkan-video"
+version = "0.1.0"
+edition = "2021"
+authors = ["小鳥 <lyrapuff@gmail.com>"]
+
+[dependencies]
+ash = { version = "0.36.0", default-features = false, features = ["linked", "debug"] }
+vk-shader-macros = "0.2.7"
+gpu-allocator = "0.17.0"
+winit = "0.26.1"
+ash-window = "0.9.1"
