@@ -1,3 +1,5 @@
+extern crate core;
+
 use ash::prelude::*;
 use ash::vk;
 use ash::extensions::ext;
@@ -22,6 +24,7 @@ unsafe extern "system" fn vulkan_debug_utils_callback(
 struct VulkanRenderer {
     instance: ash::Instance,
     debug: RendererDebug,
+    physical_device: vk::PhysicalDevice,
 }
 
 impl VulkanRenderer {
@@ -32,9 +35,15 @@ impl VulkanRenderer {
 
         let debug = RendererDebug::new(&entry, &instance)?;
 
+        let physical_device = match Self::pick_physical_device(&instance)? {
+            None => panic!("No GPU found, don't know what to do"),
+            Some(pd) => pd
+        };
+
         let renderer = Self {
             instance,
             debug,
+            physical_device,
         };
 
         Ok(renderer)
@@ -73,6 +82,28 @@ impl VulkanRenderer {
         };
 
         Ok(instance)
+    }
+
+    fn pick_physical_device(instance: &ash::Instance) -> Result<Option<vk::PhysicalDevice>, vk::Result> {
+        let physical_devices = unsafe {
+            instance.enumerate_physical_devices()?
+        };
+
+        let mut chosen = None;
+
+        for physical_device in physical_devices {
+            let props: vk::PhysicalDeviceProperties = unsafe {
+                instance.get_physical_device_properties(physical_device)
+            };
+
+            if props.device_type == vk::PhysicalDeviceType::DISCRETE_GPU {
+                chosen = Some(physical_device);
+
+                break;
+            }
+        }
+
+        Ok(chosen)
     }
 }
 
