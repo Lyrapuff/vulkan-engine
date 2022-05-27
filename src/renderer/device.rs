@@ -1,17 +1,15 @@
-use std::collections::HashMap;
 use ash::vk;
 
 pub struct RendererDevice {
     pub physical_device: vk::PhysicalDevice,
     pub device: ash::Device,
-    pub queues: HashMap<vk::QueueFlags, vk::Queue>,
+    pub graphics_queue: vk::Queue,
 }
 
 impl RendererDevice {
     pub fn new(
         instance: &ash::Instance,
-        queue_flags: &[vk::QueueFlags],
-        layer_pts: &Vec<*const i8>
+        layer_pts: &Vec<*const i8>,
     ) -> Result<Option<RendererDevice>, vk::Result> {
         let physical_device = match Self::pick_physical_device(instance)? {
             None => return Ok(None),
@@ -22,34 +20,33 @@ impl RendererDevice {
             instance.get_physical_device_queue_family_properties(physical_device)
         };
 
-        let mut queue_family_indices: HashMap<vk::QueueFlags, u32> = HashMap::new();
+        let mut graphics_queue_found = None;
 
         for (i, queue_family) in queue_family_props.iter().enumerate() {
             if queue_family.queue_count <= 0 {
                 continue;
             }
 
-            for flag in queue_flags {
-                if queue_family.queue_flags.contains(*flag) {
-                    queue_family_indices.insert(*flag, i as u32);
-                }
+            if queue_family.queue_flags.contains(vk::QueueFlags::GRAPHICS) {
+                graphics_queue_found = Some(i as u32);
+
+                break;
             }
         }
 
-        if queue_family_indices.len() != queue_flags.len() {
-            return Ok(None);
-        }
+        let graphics_queue_index = match graphics_queue_found {
+            None => return Ok(None),
+            Some(i) => i
+        };
 
         let priorities = [1.0f32];
 
-        let mut queue_infos: Vec<vk::DeviceQueueCreateInfo> = Vec::new();
-
-        for (_, i) in queue_family_indices.iter() {
-            queue_infos.push(vk::DeviceQueueCreateInfo::builder()
-                .queue_family_index(*i)
+        let queue_infos: Vec<vk::DeviceQueueCreateInfo> = vec![
+            vk::DeviceQueueCreateInfo::builder()
+                .queue_family_index(graphics_queue_index)
                 .queue_priorities(&priorities)
-                .build());
-        }
+                .build()
+        ];
 
         let device_create_info = vk::DeviceCreateInfo::builder()
             .queue_create_infos(&queue_infos)
@@ -59,20 +56,14 @@ impl RendererDevice {
             instance.create_device(physical_device, &device_create_info, None)?
         };
 
-        let mut queues: HashMap<vk::QueueFlags, vk::Queue> = HashMap::new();
-
-        for (flags, i) in queue_family_indices {
-            let queue = unsafe {
-                device.get_device_queue(i, 0)
-            };
-
-            queues.insert(flags, queue);
-        }
+        let graphics_queue = unsafe {
+            device.get_device_queue(graphics_queue_index, 0)
+        };
 
         Ok(Some(RendererDevice {
             physical_device,
             device,
-            queues,
+            graphics_queue,
         }))
     }
 

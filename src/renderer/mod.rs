@@ -1,10 +1,12 @@
 pub mod debug;
 pub mod device;
+pub mod window;
 
 extern crate core;
 
 use debug::RendererDebug;
 use device::RendererDevice;
+use window::RendererWindow;
 
 use ash::prelude::*;
 use ash::vk;
@@ -15,7 +17,8 @@ use std::ffi;
 pub struct VulkanRenderer {
     pub instance: ash::Instance,
     pub debug: RendererDebug,
-    pub device: RendererDevice,
+    pub main_device: RendererDevice,
+    pub window: RendererWindow,
 }
 
 impl VulkanRenderer {
@@ -34,15 +37,18 @@ impl VulkanRenderer {
 
         let debug = RendererDebug::new(&entry, &instance)?;
 
-        let device = match RendererDevice::new(&instance, &[vk::QueueFlags::GRAPHICS], &layer_pts)? {
+        let main_device = match RendererDevice::new(&instance, &layer_pts)? {
             None => panic!("No fitting GPU found, don't know what to do"),
             Some(dev) => dev
         };
 
+        let window = RendererWindow::new(&entry, &instance)?;
+
         let renderer = Self {
             instance,
             debug,
-            device,
+            main_device,
+            window,
         };
 
         Ok(renderer)
@@ -53,7 +59,9 @@ impl VulkanRenderer {
         let engine_name = ffi::CString::new("Vulkan Engine").unwrap();
 
         let extension_name_pts: Vec<*const i8> = vec![
-            ext::DebugUtils::name().as_ptr()
+            ext::DebugUtils::name().as_ptr(),
+            ash::extensions::khr::Surface::name().as_ptr(),
+            ash::extensions::khr::XlibSurface::name().as_ptr(),
         ];
 
         let app_info = vk::ApplicationInfo::builder()
@@ -79,7 +87,9 @@ impl VulkanRenderer {
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
         unsafe {
-            self.device.cleanup();
+            self.window.cleanup();
+
+            self.main_device.cleanup();
 
             self.debug.cleanup();
 
