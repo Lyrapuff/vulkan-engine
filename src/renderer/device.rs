@@ -3,10 +3,17 @@ use ash::vk;
 pub struct RendererDevice {
     pub physical_device: vk::PhysicalDevice,
     pub device: ash::Device,
+    pub graphics_queue_family: u32,
     pub graphics_queue: vk::Queue,
 }
 
 impl RendererDevice {
+    fn used_extensions() -> Vec<*const i8> {
+        vec![
+            ash::extensions::khr::Swapchain::name().as_ptr()
+        ]
+    }
+
     pub fn new(
         instance: &ash::Instance,
         layer_pts: &Vec<*const i8>,
@@ -34,7 +41,7 @@ impl RendererDevice {
             }
         }
 
-        let graphics_queue_index = match graphics_queue_found {
+        let graphics_queue_family = match graphics_queue_found {
             None => return Ok(None),
             Some(i) => i
         };
@@ -43,13 +50,16 @@ impl RendererDevice {
 
         let queue_infos: Vec<vk::DeviceQueueCreateInfo> = vec![
             vk::DeviceQueueCreateInfo::builder()
-                .queue_family_index(graphics_queue_index)
+                .queue_family_index(graphics_queue_family)
                 .queue_priorities(&priorities)
                 .build()
         ];
 
+        let used_extensions = Self::used_extensions();
+
         let device_create_info = vk::DeviceCreateInfo::builder()
             .queue_create_infos(&queue_infos)
+            .enabled_extension_names(&used_extensions)
             .enabled_layer_names(layer_pts);
 
         let device = unsafe {
@@ -57,13 +67,14 @@ impl RendererDevice {
         };
 
         let graphics_queue = unsafe {
-            device.get_device_queue(graphics_queue_index, 0)
+            device.get_device_queue(graphics_queue_family, 0)
         };
 
         Ok(Some(RendererDevice {
             physical_device,
             device,
             graphics_queue,
+            graphics_queue_family,
         }))
     }
 
