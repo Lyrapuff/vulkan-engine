@@ -21,12 +21,44 @@ impl RendererSwapchain {
         let queue_families = [device.graphics_queue_family];
 
         let capabilities = window.capabilities(device.physical_device)?;
-        let formats = window.formats(device.physical_device)?;
 
+        let formats = window.formats(device.physical_device)?;
         let format = formats.first().unwrap();
 
+        let (swapchain_loader, swapchain) = Self::create_swapchain(
+            window.surface,
+            &capabilities,
+            format,
+            &queue_families,
+            instance,
+            device,
+        )?;
+
+        // swapchain images:
+
+        let images = unsafe {
+            swapchain_loader.get_swapchain_images(swapchain)?
+        };
+
+        let image_views = Self::create_image_views(&images, &device)?;
+
+        Ok(RendererSwapchain {
+            swapchain_loader,
+            swapchain,
+            image_views,
+        })
+    }
+
+    fn create_swapchain(
+        surface: vk::SurfaceKHR,
+        capabilities: &vk::SurfaceCapabilitiesKHR,
+        format: &vk::SurfaceFormatKHR,
+        queue_families: &[u32],
+        instance: &ash::Instance,
+        device: &RendererDevice,
+    ) -> Result<(khr::Swapchain, vk::SwapchainKHR), vk::Result> {
         let swapchain_info = vk::SwapchainCreateInfoKHR::builder()
-            .surface(window.surface)
+            .surface(surface)
             .min_image_count(3.max(capabilities.min_image_count).min(capabilities.max_image_count))
             .image_format(format.format)
             .image_color_space(format.color_space)
@@ -44,15 +76,13 @@ impl RendererSwapchain {
             swapchain_loader.create_swapchain(&swapchain_info, None)?
         };
 
-        // swapchain images:
+        Ok((swapchain_loader, swapchain))
+    }
 
-        let images = unsafe {
-            swapchain_loader.get_swapchain_images(swapchain)?
-        };
-
+    fn create_image_views(images: &Vec<vk::Image>, device: &RendererDevice) -> Result<Vec<vk::ImageView>, vk::Result> {
         let mut image_views = Vec::with_capacity(images.len());
 
-        for image in &images {
+        for image in images {
             let subresource_range = vk::ImageSubresourceRange::builder()
                 .aspect_mask(vk::ImageAspectFlags::COLOR)
                 .base_mip_level(0)
@@ -73,11 +103,7 @@ impl RendererSwapchain {
             image_views.push(image_view);
         }
 
-        Ok(RendererSwapchain {
-            swapchain_loader,
-            swapchain,
-            image_views,
-        })
+        Ok(image_views)
     }
 
     pub unsafe fn cleanup(&self, device: &RendererDevice) {

@@ -1,4 +1,5 @@
 use ash::vk;
+use ash::extensions::khr;
 
 use winit::event_loop::EventLoop;
 use winit::window::Window;
@@ -7,7 +8,7 @@ pub struct RendererWindow {
     pub event_loop: EventLoop<()>,
     pub window: Window,
     pub surface: vk::SurfaceKHR,
-    pub surface_loader: ash::extensions::khr::Surface,
+    pub surface_loader: khr::Surface,
 }
 
 impl RendererWindow {
@@ -28,7 +29,7 @@ impl RendererWindow {
             ash_window::create_surface(entry, instance, &window, None)?
         };
 
-        let surface_loader = ash::extensions::khr::Surface::new(entry, instance);
+        let surface_loader = khr::Surface::new(entry, instance);
 
         Ok(RendererWindow {
             event_loop,
