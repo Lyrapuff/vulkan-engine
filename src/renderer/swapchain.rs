@@ -1,10 +1,11 @@
 use ash::vk;
+use ash::extensions::khr;
 
 use crate::renderer::device::RendererDevice;
 use crate::renderer::window::RendererWindow;
 
 pub struct RendererSwapchain {
-    pub swapchain_loader: ash::extensions::khr::Swapchain,
+    pub swapchain_loader: khr::Swapchain,
     pub swapchain: vk::SwapchainKHR,
     pub image_views: Vec<vk::ImageView>,
 }
@@ -38,7 +39,7 @@ impl RendererSwapchain {
             .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
             .present_mode(vk::PresentModeKHR::FIFO);
 
-        let swapchain_loader = ash::extensions::khr::Swapchain::new(instance, &device.device);
+        let swapchain_loader = khr::Swapchain::new(instance, &device.device);
         let swapchain = unsafe {
             swapchain_loader.create_swapchain(&swapchain_info, None)?
         };
