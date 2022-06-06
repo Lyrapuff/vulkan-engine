@@ -21,6 +21,7 @@ pub struct VulkanRenderer {
     pub main_device: RendererDevice,
     pub window: RendererWindow,
     pub swapchain: RendererSwapchain,
+    pub render_pass: vk::RenderPass,
 }
 
 impl VulkanRenderer {
@@ -70,12 +71,15 @@ impl VulkanRenderer {
 
         let swapchain = RendererSwapchain::new(&instance, &main_device, &window)?;
 
+        let render_pass = Self::create_render_pass(&main_device, &window)?;
+
         let renderer = Self {
             instance,
             debug,
             main_device,
             window,
             swapchain,
+            render_pass,
         };
 
         Ok(renderer)
@@ -107,11 +111,64 @@ impl VulkanRenderer {
 
         Ok(instance)
     }
+
+    fn create_render_pass(device: &RendererDevice, window: &RendererWindow) -> Result<vk::RenderPass, vk::Result> {
+        let formats = window.formats(device.physical_device)?;
+        let format = formats.first().unwrap();
+
+        let attachments = [
+            vk::AttachmentDescription::builder()
+                .format(format.format)
+                .load_op(vk::AttachmentLoadOp::CLEAR)
+                .store_op(vk::AttachmentStoreOp::STORE)
+                .stencil_load_op(vk::AttachmentLoadOp::DONT_CARE)
+                .stencil_store_op(vk::AttachmentStoreOp::DONT_CARE)
+                .initial_layout(vk::ImageLayout::UNDEFINED)
+                .final_layout(vk::ImageLayout::PRESENT_SRC_KHR)
+                .samples(vk::SampleCountFlags::TYPE_1)
+                .build()
+        ];
+
+        let color_attachment_references = [vk::AttachmentReference {
+            attachment: 0,
+            layout: vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+        }];
+
+        let subpasses = [
+            vk::SubpassDescription::builder()
+                .color_attachments(&color_attachment_references)
+                .pipeline_bind_point(vk::PipelineBindPoint::GRAPHICS)
+                .build()
+        ];
+
+        let subpass_dependencies = [
+            vk::SubpassDependency::builder()
+                .src_subpass(vk::SUBPASS_EXTERNAL)
+                .src_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                .dst_subpass(0)
+                .dst_stage_mask(vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
+                .dst_access_mask(vk::AccessFlags::COLOR_ATTACHMENT_READ | vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
+                .build()
+        ];
+
+        let render_pass_info = vk::RenderPassCreateInfo::builder()
+            .attachments(&attachments)
+            .subpasses(&subpasses)
+            .dependencies(&subpass_dependencies);
+
+        let render_pass = unsafe {
+            device.device.create_render_pass(&render_pass_info, None)?
+        };
+
+        Ok(render_pass)
+    }
 }
 
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
         unsafe {
+            self.main_device.device.destroy_render_pass(self.render_pass, None);
+
             self.swapchain.cleanup(&self.main_device);
 
             self.window.cleanup();
