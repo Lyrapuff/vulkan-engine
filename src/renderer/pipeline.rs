@@ -57,8 +57,8 @@ impl RendererPipeline {
         extent: vk::Extent2D,
         render_pass: vk::RenderPass
     ) -> Result<RendererPipeline, vk::Result> {
-        let vert = Shader::from_code_vert(&device.device, vk_shader_macros::include_glsl!("./shaders/default.vert"))?;
-        let frag = Shader::from_code_frag(&device.device, vk_shader_macros::include_glsl!("./shaders/default.frag"))?;
+        let vert = Shader::from_code_vert(&device.logical_device, vk_shader_macros::include_glsl!("./shaders/default.vert"))?;
+        let frag = Shader::from_code_frag(&device.logical_device, vk_shader_macros::include_glsl!("./shaders/default.frag"))?;
 
         let entry_point = ffi::CString::new("main").unwrap();
 
@@ -70,7 +70,7 @@ impl RendererPipeline {
         let vertex_input_info = vk::PipelineVertexInputStateCreateInfo::builder();
 
         let (pipeline_layout, pipeline) = Self::create_graphics_pipeline(
-            &device.device,
+            &device.logical_device,
             render_pass,
             extent,
             vertex_input_info,
@@ -78,8 +78,8 @@ impl RendererPipeline {
         )?;
 
         unsafe {
-            vert.cleanup(&device.device);
-            frag.cleanup(&device.device);
+            vert.cleanup(&device.logical_device);
+            frag.cleanup(&device.logical_device);
         }
 
         Ok(RendererPipeline {

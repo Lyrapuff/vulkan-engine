@@ -2,7 +2,7 @@ use ash::vk;
 
 pub struct RendererDevice {
     pub physical_device: vk::PhysicalDevice,
-    pub device: ash::Device,
+    pub logical_device: ash::Device,
     pub graphics_queue_family: u32,
     pub graphics_queue: vk::Queue,
 }
@@ -72,7 +72,7 @@ impl RendererDevice {
 
         Ok(Some(RendererDevice {
             physical_device,
-            device,
+            logical_device: device,
             graphics_queue,
             graphics_queue_family,
         }))
@@ -101,6 +101,6 @@ impl RendererDevice {
     }
 
     pub unsafe fn cleanup(&self) {
-        self.device.destroy_device(None);
+        self.logical_device.destroy_device(None);
     }
 }

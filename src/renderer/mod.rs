@@ -164,7 +164,7 @@ impl VulkanRenderer {
             .dependencies(&subpass_dependencies);
 
         let render_pass = unsafe {
-            device.device.create_render_pass(&render_pass_info, None)?
+            device.logical_device.create_render_pass(&render_pass_info, None)?
         };
 
         Ok(render_pass)
@@ -174,9 +174,9 @@ impl VulkanRenderer {
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
         unsafe {
-            self.graphics_pipeline.cleanup(&self.main_device.device);
+            self.graphics_pipeline.cleanup(&self.main_device.logical_device);
 
-            self.main_device.device.destroy_render_pass(self.render_pass, None);
+            self.main_device.logical_device.destroy_render_pass(self.render_pass, None);
 
             self.swapchain.cleanup(&self.main_device);
 

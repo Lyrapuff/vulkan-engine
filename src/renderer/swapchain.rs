@@ -75,7 +75,7 @@ impl RendererSwapchain {
             .composite_alpha(vk::CompositeAlphaFlagsKHR::OPAQUE)
             .present_mode(vk::PresentModeKHR::FIFO);
 
-        let swapchain_loader = khr::Swapchain::new(instance, &device.device);
+        let swapchain_loader = khr::Swapchain::new(instance, &device.logical_device);
         let swapchain = unsafe {
             swapchain_loader.create_swapchain(&swapchain_info, None)?
         };
@@ -101,7 +101,7 @@ impl RendererSwapchain {
                 .subresource_range(*subresource_range);
 
             let image_view = unsafe {
-                device.device.create_image_view(&image_view_info, None)?
+                device.logical_device.create_image_view(&image_view_info, None)?
             };
 
             image_views.push(image_view);
@@ -122,7 +122,7 @@ impl RendererSwapchain {
                 .layers(1);
 
             let framebuffer = unsafe {
-                device.device.create_framebuffer(&framebuffer_info, None)?
+                device.logical_device.create_framebuffer(&framebuffer_info, None)?
             };
 
             self.framebuffers.push(framebuffer);
@@ -133,11 +133,11 @@ impl RendererSwapchain {
 
     pub unsafe fn cleanup(&self, device: &RendererDevice) {
         for framebuffer in &self.framebuffers {
-            device.device.destroy_framebuffer(*framebuffer, None);
+            device.logical_device.destroy_framebuffer(*framebuffer, None);
         }
 
         for image_view in &self.image_views {
-            device.device.destroy_image_view(*image_view, None);
+            device.logical_device.destroy_image_view(*image_view, None);
         }
 
         self.swapchain_loader.destroy_swapchain(self.swapchain, None);
