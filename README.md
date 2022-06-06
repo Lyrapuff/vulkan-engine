@@ -8,6 +8,8 @@ Essential milestones
 - [done] Queues & Device
 - [done] Surface & Window
 - [done] Swapchain
+- [done] RenderPass
+- [done] Graphics pipeline
 - [next] Everything else
 
 Used resources
