@@ -4,27 +4,101 @@ use crate::renderer::device::RendererDevice;
 
 use std::ffi;
 
+pub struct Shader {
+    pub shader_module: vk::ShaderModule,
+    pub stage: vk::ShaderStageFlags,
+}
+
+impl Shader {
+    pub fn from_code(device: &ash::Device, code: &[u32], stage: vk::ShaderStageFlags) -> Result<Shader, vk::Result> {
+        let shader_module_info = vk::ShaderModuleCreateInfo::builder()
+            .code(code);
+
+        let shader_module = unsafe {
+            device.create_shader_module(&shader_module_info, None)?
+        };
+
+        Ok(Shader {
+            shader_module,
+            stage,
+        })
+    }
+
+    pub fn from_code_vert(device: &ash::Device, code: &[u32]) -> Result<Shader, vk::Result> {
+        Self::from_code(device, code, vk::ShaderStageFlags::VERTEX)
+    }
+
+    pub fn from_code_frag(device: &ash::Device, code: &[u32]) -> Result<Shader, vk::Result> {
+        Self::from_code(device, code, vk::ShaderStageFlags::FRAGMENT)
+    }
+
+    pub fn shader_stage(&self, entry_point: &ffi::CString) -> vk::PipelineShaderStageCreateInfo {
+        let stage = vk::PipelineShaderStageCreateInfo::builder()
+            .stage(self.stage)
+            .module(self.shader_module)
+            .name(entry_point);
+
+        stage.build()
+    }
+
+    pub unsafe fn cleanup(&self, device: &ash::Device) {
+       device.destroy_shader_module(self.shader_module, None);
+    }
+}
+
 pub struct RendererPipeline {
     pub pipeline: vk::Pipeline,
     pub pipeline_layout: vk::PipelineLayout,
 }
 
 impl RendererPipeline {
-    pub fn new(device: &RendererDevice, extent: vk::Extent2D, render_pass: vk::RenderPass) -> Result<RendererPipeline, vk::Result> {
-        let vert = Self::create_shader_module(device, vk_shader_macros::include_glsl!("./shaders/default.vert"))?;
-        let frag = Self::create_shader_module(device, vk_shader_macros::include_glsl!("./shaders/default.frag"))?;
+    pub fn new(
+        device: &RendererDevice,
+        extent: vk::Extent2D,
+        render_pass: vk::RenderPass
+    ) -> Result<RendererPipeline, vk::Result> {
+        let vert = Shader::from_code_vert(&device.device, vk_shader_macros::include_glsl!("./shaders/default.vert"))?;
+        let frag = Shader::from_code_frag(&device.device, vk_shader_macros::include_glsl!("./shaders/default.frag"))?;
 
         let entry_point = ffi::CString::new("main").unwrap();
 
         let shader_stages = [
-            Self::shader_stage(&entry_point, vk::ShaderStageFlags::VERTEX, vert),
-            Self::shader_stage(&entry_point, vk::ShaderStageFlags::FRAGMENT, frag),
+            vert.shader_stage(&entry_point),
+            frag.shader_stage(&entry_point),
         ];
 
         let vertex_input_info = vk::PipelineVertexInputStateCreateInfo::builder();
 
+        let (pipeline_layout, pipeline) = Self::create_graphics_pipeline(
+            &device.device,
+            render_pass,
+            extent,
+            vertex_input_info,
+            &shader_stages
+        )?;
+
+        unsafe {
+            vert.cleanup(&device.device);
+            frag.cleanup(&device.device);
+        }
+
+        Ok(RendererPipeline {
+            pipeline,
+            pipeline_layout,
+        })
+    }
+
+    fn create_graphics_pipeline(
+        device: &ash::Device,
+        render_pass: vk::RenderPass,
+        extent: vk::Extent2D,
+        vertex_input_info: vk::PipelineVertexInputStateCreateInfoBuilder,
+        shader_stages: &[vk::PipelineShaderStageCreateInfo]
+    ) -> Result<(vk::PipelineLayout, vk::Pipeline), vk::Result> {
         let input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo::builder()
             .topology(vk::PrimitiveTopology::TRIANGLE_LIST);
+
+        // viewport:
 
         let viewports = [
             vk::Viewport {
@@ -51,14 +125,20 @@ impl RendererPipeline {
             .viewports(&viewports)
             .scissors(&scissors);
 
+        // rasterizer:
+
         let rasterizer_info = vk::PipelineRasterizationStateCreateInfo::builder()
             .line_width(1.0)
             .front_face(vk::FrontFace::COUNTER_CLOCKWISE)
             .cull_mode(vk::CullModeFlags::NONE)
             .polygon_mode(vk::PolygonMode::FILL);
 
+        // multisampler:
+
         let multisampler_info = vk::PipelineMultisampleStateCreateInfo::builder()
             .rasterization_samples(vk::SampleCountFlags::TYPE_1);
+
+        // color blend:
 
         let color_blend_attachments = [
             vk::PipelineColorBlendAttachmentState::builder()
@@ -81,13 +161,15 @@ impl RendererPipeline {
         let color_blend_info = vk::PipelineColorBlendStateCreateInfo::builder()
             .attachments(&color_blend_attachments);
 
+        // pipeline
+
         let pipeline_layout_info = vk::PipelineLayoutCreateInfo::builder();
         let pipeline_layout = unsafe {
-            device.device.create_pipeline_layout(&pipeline_layout_info, None)?
+            device.create_pipeline_layout(&pipeline_layout_info, None)?
         };
 
         let pipeline_info = vk::GraphicsPipelineCreateInfo::builder()
-            .stages(&shader_stages)
+            .stages(shader_stages)
             .vertex_input_state(&vertex_input_info)
             .input_assembly_state(&input_assembly_info)
             .viewport_state(&viewport_info)
@@ -99,42 +181,14 @@ impl RendererPipeline {
             .subpass(0);
 
         let pipeline = unsafe {
-            device.device.create_graphics_pipelines(
+            device.create_graphics_pipelines(
                 vk::PipelineCache::null(),
                 &[pipeline_info.build()],
-                    None,
+                None,
             ).unwrap()
         }[0];
 
-        unsafe {
-            device.device.destroy_shader_module(vert, None);
-            device.device.destroy_shader_module(frag, None);
-        }
-
-        Ok(RendererPipeline {
-            pipeline,
-            pipeline_layout,
-        })
-    }
-
-    fn create_shader_module(device: &RendererDevice, code: &[u32]) -> Result<vk::ShaderModule, vk::Result> {
-        let shader_module_info = vk::ShaderModuleCreateInfo::builder()
-            .code(code);
-
-        let shader_module = unsafe {
-            device.device.create_shader_module(&shader_module_info, None)?
-        };
-
-        Ok(shader_module)
-    }
-
-    fn shader_stage(entry_point: &ffi::CString, stage: vk::ShaderStageFlags, module: vk::ShaderModule) -> vk::PipelineShaderStageCreateInfo {
-        let stage = vk::PipelineShaderStageCreateInfo::builder()
-            .stage(stage)
-            .module(module)
-            .name(entry_point);
-
-        stage.build()
+        Ok((pipeline_layout, pipeline))
     }
 
     pub unsafe fn cleanup(&self, device: &ash::Device) {
