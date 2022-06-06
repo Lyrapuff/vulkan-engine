@@ -2,6 +2,7 @@ pub mod debug;
 pub mod device;
 pub mod window;
 pub mod swapchain;
+pub mod pipeline;
 
 extern crate core;
 
@@ -9,6 +10,7 @@ use debug::RendererDebug;
 use device::RendererDevice;
 use window::RendererWindow;
 use swapchain::RendererSwapchain;
+use pipeline::RendererPipeline;
 
 use ash::vk;
 use ash::extensions::ext;
@@ -22,6 +24,7 @@ pub struct VulkanRenderer {
     pub window: RendererWindow,
     pub swapchain: RendererSwapchain,
     pub render_pass: vk::RenderPass,
+    pub graphics_pipeline: RendererPipeline,
 }
 
 impl VulkanRenderer {
@@ -69,9 +72,12 @@ impl VulkanRenderer {
             Some(dev) => dev
         };
 
-        let swapchain = RendererSwapchain::new(&instance, &main_device, &window)?;
-
         let render_pass = Self::create_render_pass(&main_device, &window)?;
+
+        let mut swapchain = RendererSwapchain::new(&instance, &main_device, &window)?;
+        swapchain.create_framebuffers(&main_device, render_pass)?;
+
+        let graphics_pipeline = RendererPipeline::new(&main_device, swapchain.extent, render_pass)?;
 
         let renderer = Self {
             instance,
@@ -80,6 +86,7 @@ impl VulkanRenderer {
             window,
             swapchain,
             render_pass,
+            graphics_pipeline,
         };
 
         Ok(renderer)
@@ -167,6 +174,8 @@ impl VulkanRenderer {
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
         unsafe {
+            self.graphics_pipeline.cleanup(&self.main_device.device);
+
             self.main_device.device.destroy_render_pass(self.render_pass, None);
 
             self.swapchain.cleanup(&self.main_device);

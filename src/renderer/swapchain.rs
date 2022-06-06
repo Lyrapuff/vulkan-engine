@@ -8,6 +8,8 @@ pub struct RendererSwapchain {
     pub swapchain_loader: khr::Swapchain,
     pub swapchain: vk::SwapchainKHR,
     pub image_views: Vec<vk::ImageView>,
+    pub framebuffers: Vec<vk::Framebuffer>,
+    pub extent: vk::Extent2D,
 }
 
 impl RendererSwapchain {
@@ -46,6 +48,8 @@ impl RendererSwapchain {
             swapchain_loader,
             swapchain,
             image_views,
+            framebuffers: vec![],
+            extent: capabilities.current_extent,
         })
     }
 
@@ -106,7 +110,32 @@ impl RendererSwapchain {
         Ok(image_views)
     }
 
+    pub fn create_framebuffers(&mut self, device: &RendererDevice, render_pass: vk::RenderPass) -> Result<(), vk::Result> {
+        for image_view in &self.image_views {
+            let image_view = [*image_view];
+
+            let framebuffer_info = vk::FramebufferCreateInfo::builder()
+                .render_pass(render_pass)
+                .attachments(&image_view)
+                .width(self.extent.width)
+                .height(self.extent.height)
+                .layers(1);
+
+            let framebuffer = unsafe {
+                device.device.create_framebuffer(&framebuffer_info, None)?
+            };
+
+            self.framebuffers.push(framebuffer);
+        }
+
+        Ok(())
+    }
+
     pub unsafe fn cleanup(&self, device: &RendererDevice) {
+        for framebuffer in &self.framebuffers {
+            device.device.destroy_framebuffer(*framebuffer, None);
+        }
+
         for image_view in &self.image_views {
             device.device.destroy_image_view(*image_view, None);
         }
