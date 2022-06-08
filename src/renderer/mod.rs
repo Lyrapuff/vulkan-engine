@@ -3,8 +3,7 @@ pub mod device;
 pub mod window;
 pub mod swapchain;
 pub mod pipeline;
-
-extern crate core;
+pub mod shader;
 
 use debug::RendererDebug;
 use device::RendererDevice;
