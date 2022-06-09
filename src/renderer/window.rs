@@ -4,6 +4,8 @@ use ash::extensions::khr;
 use winit::event_loop::EventLoop;
 use winit::window::Window;
 
+use anyhow::Result;
+
 pub struct RendererWindow {
     pub event_loop: EventLoop<()>,
     pub window: Window,
@@ -12,7 +14,7 @@ pub struct RendererWindow {
 }
 
 impl RendererWindow {
-    pub fn create_window() -> Result<(EventLoop<()>, Window), winit::error::OsError> {
+    pub fn create_window() -> Result<(EventLoop<()>, Window)> {
         let event_loop = EventLoop::new();
         let window = Window::new(&event_loop)?;
 
@@ -24,7 +26,7 @@ impl RendererWindow {
         window: Window,
         entry: &ash::Entry,
         instance: &ash::Instance
-    ) -> Result<RendererWindow, vk::Result> {
+    ) -> Result<RendererWindow> {
         let surface = unsafe {
             ash_window::create_surface(entry, instance, &window, None)?
         };

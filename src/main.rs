@@ -2,9 +2,11 @@ mod renderer;
 
 use renderer::VulkanRenderer;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+use anyhow::{Context, Result};
+
+fn main() -> Result<()> {
     let _renderer = VulkanRenderer::new()
-        .expect("Failed to create renderer");
+        .context("Failed to create renderer");
 
     Ok(())
 }

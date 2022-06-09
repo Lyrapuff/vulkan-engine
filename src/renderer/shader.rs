@@ -2,13 +2,15 @@ use ash::vk;
 
 use std::ffi;
 
+use anyhow::Result;
+
 pub struct Shader {
     pub shader_module: vk::ShaderModule,
     pub stage: vk::ShaderStageFlags,
 }
 
 impl Shader {
-    pub fn from_code(device: &ash::Device, code: &[u32], stage: vk::ShaderStageFlags) -> Result<Shader, vk::Result> {
+    pub fn from_code(device: &ash::Device, code: &[u32], stage: vk::ShaderStageFlags) -> Result<Shader> {
         let shader_module_info = vk::ShaderModuleCreateInfo::builder()
             .code(code);
 
@@ -22,11 +24,11 @@ impl Shader {
         })
     }
 
-    pub fn from_code_vert(device: &ash::Device, code: &[u32]) -> Result<Shader, vk::Result> {
+    pub fn from_code_vert(device: &ash::Device, code: &[u32]) -> Result<Shader> {
         Self::from_code(device, code, vk::ShaderStageFlags::VERTEX)
     }
 
-    pub fn from_code_frag(device: &ash::Device, code: &[u32]) -> Result<Shader, vk::Result> {
+    pub fn from_code_frag(device: &ash::Device, code: &[u32]) -> Result<Shader> {
         Self::from_code(device, code, vk::ShaderStageFlags::FRAGMENT)
     }
 

@@ -5,6 +5,8 @@ use crate::renderer::shader::Shader;
 
 use std::ffi;
 
+use anyhow::Result;
+
 pub struct RendererPipeline {
     pub pipeline: vk::Pipeline,
     pub pipeline_layout: vk::PipelineLayout,
@@ -15,7 +17,7 @@ impl RendererPipeline {
         device: &RendererDevice,
         extent: vk::Extent2D,
         render_pass: vk::RenderPass
-    ) -> Result<RendererPipeline, vk::Result> {
+    ) -> Result<RendererPipeline> {
         let vert = Shader::from_code_vert(&device.logical_device, vk_shader_macros::include_glsl!("./shaders/default.vert"))?;
         let frag = Shader::from_code_frag(&device.logical_device, vk_shader_macros::include_glsl!("./shaders/default.frag"))?;
 
@@ -53,7 +55,7 @@ impl RendererPipeline {
         extent: vk::Extent2D,
         vertex_input_info: vk::PipelineVertexInputStateCreateInfoBuilder,
         shader_stages: &[vk::PipelineShaderStageCreateInfo]
-    ) -> Result<(vk::PipelineLayout, vk::Pipeline), vk::Result> {
+    ) -> Result<(vk::PipelineLayout, vk::Pipeline)> {
         // input:
 
         let input_assembly_info = vk::PipelineInputAssemblyStateCreateInfo::builder()

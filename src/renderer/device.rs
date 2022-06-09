@@ -1,5 +1,7 @@
 use ash::vk;
 
+use anyhow::Result;
+
 pub struct RendererDevice {
     pub physical_device: vk::PhysicalDevice,
     pub logical_device: ash::Device,
@@ -17,7 +19,7 @@ impl RendererDevice {
     pub fn new(
         instance: &ash::Instance,
         layer_pts: &Vec<*const i8>,
-    ) -> Result<Option<RendererDevice>, vk::Result> {
+    ) -> Result<Option<RendererDevice>> {
         let physical_device = match Self::pick_physical_device(instance)? {
             None => return Ok(None),
             Some(pd) => pd
@@ -78,7 +80,7 @@ impl RendererDevice {
         }))
     }
 
-    fn pick_physical_device(instance: &ash::Instance) -> Result<Option<vk::PhysicalDevice>, vk::Result>  {
+    fn pick_physical_device(instance: &ash::Instance) -> Result<Option<vk::PhysicalDevice>>  {
         let physical_devices = unsafe {
             instance.enumerate_physical_devices()?
         };

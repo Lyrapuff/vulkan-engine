@@ -4,6 +4,8 @@ use ash::extensions::khr;
 use crate::renderer::device::RendererDevice;
 use crate::renderer::window::RendererWindow;
 
+use anyhow::Result;
+
 pub struct RendererSwapchain {
     pub swapchain_loader: khr::Swapchain,
     pub swapchain: vk::SwapchainKHR,
@@ -17,7 +19,7 @@ impl RendererSwapchain {
         instance: &ash::Instance,
         device: &RendererDevice,
         window: &RendererWindow
-    ) -> Result<RendererSwapchain, vk::Result> {
+    ) -> Result<RendererSwapchain> {
         // swapchain creation:
 
         let queue_families = [device.graphics_queue_family];
@@ -60,7 +62,7 @@ impl RendererSwapchain {
         queue_families: &[u32],
         instance: &ash::Instance,
         device: &RendererDevice,
-    ) -> Result<(khr::Swapchain, vk::SwapchainKHR), vk::Result> {
+    ) -> Result<(khr::Swapchain, vk::SwapchainKHR)> {
         let swapchain_info = vk::SwapchainCreateInfoKHR::builder()
             .surface(surface)
             .min_image_count(3.max(capabilities.min_image_count).min(capabilities.max_image_count))
@@ -83,7 +85,7 @@ impl RendererSwapchain {
         Ok((swapchain_loader, swapchain))
     }
 
-    fn create_image_views(images: &Vec<vk::Image>, device: &RendererDevice) -> Result<Vec<vk::ImageView>, vk::Result> {
+    fn create_image_views(images: &Vec<vk::Image>, device: &RendererDevice) -> Result<Vec<vk::ImageView>> {
         let mut image_views = Vec::with_capacity(images.len());
 
         for image in images {
@@ -110,7 +112,7 @@ impl RendererSwapchain {
         Ok(image_views)
     }
 
-    pub fn create_framebuffers(&mut self, device: &RendererDevice, render_pass: vk::RenderPass) -> Result<(), vk::Result> {
+    pub fn create_framebuffers(&mut self, device: &RendererDevice, render_pass: vk::RenderPass) -> Result<()> {
         for image_view in &self.image_views {
             let image_view = [*image_view];
 

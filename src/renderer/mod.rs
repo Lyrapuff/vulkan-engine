@@ -16,6 +16,8 @@ use ash::extensions::ext;
 
 use std::ffi;
 
+use anyhow::Result;
+
 pub struct VulkanRenderer {
     pub instance: ash::Instance,
     pub debug: RendererDebug,
@@ -40,9 +42,8 @@ impl VulkanRenderer {
         ]
     }
 
-    pub fn new() -> Result<Self, vk::Result> {
-        let (event_loop, window) = RendererWindow::create_window()
-            .expect("Failed to create window");
+    pub fn new() -> Result<Self> {
+        let (event_loop, window) = RendererWindow::create_window()?;
 
         window.set_title("Vulkan Engine");
 
@@ -95,9 +96,9 @@ impl VulkanRenderer {
         entry: &ash::Entry,
         layer_name_pts: &Vec<*const i8>,
         extension_name_pts: &Vec<*const i8>
-    ) -> Result<ash::Instance, vk::Result> {
-        let app_name = ffi::CString::new("Vulkan App").unwrap();
-        let engine_name = ffi::CString::new("Vulkan Engine").unwrap();
+    ) -> Result<ash::Instance> {
+        let app_name = ffi::CString::new("Vulkan App")?;
+        let engine_name = ffi::CString::new("Vulkan Engine")?;
 
         let app_info = vk::ApplicationInfo::builder()
             .application_name(&app_name)
@@ -118,7 +119,7 @@ impl VulkanRenderer {
         Ok(instance)
     }
 
-    fn create_render_pass(device: &RendererDevice, window: &RendererWindow) -> Result<vk::RenderPass, vk::Result> {
+    fn create_render_pass(device: &RendererDevice, window: &RendererWindow) -> Result<vk::RenderPass> {
         let formats = window.formats(device.physical_device)?;
         let format = formats.first().unwrap();
 

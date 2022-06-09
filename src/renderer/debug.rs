@@ -3,6 +3,8 @@ use ash::vk;
 
 use std::ffi;
 
+use anyhow::Result;
+
 unsafe extern "system" fn vulkan_debug_utils_callback(
     message_severity: vk::DebugUtilsMessageSeverityFlagsEXT,
     message_type: vk::DebugUtilsMessageTypeFlagsEXT,
@@ -24,7 +26,7 @@ pub struct RendererDebug {
 }
 
 impl RendererDebug {
-    pub fn new(entry: &ash::Entry, instance: &ash::Instance) -> Result<Self, vk::Result> {
+    pub fn new(entry: &ash::Entry, instance: &ash::Instance) -> Result<Self> {
         let debug_utils = ext::DebugUtils::new(entry, instance);
 
         let messenger_info = vk::DebugUtilsMessengerCreateInfoEXT {
