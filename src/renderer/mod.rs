@@ -4,12 +4,14 @@ pub mod window;
 pub mod swapchain;
 pub mod pipeline;
 pub mod shader;
+pub mod command_pools;
 
 use debug::RendererDebug;
 use device::RendererDevice;
 use window::RendererWindow;
 use swapchain::RendererSwapchain;
 use pipeline::RendererPipeline;
+use command_pools::CommandPools;
 
 use ash::vk;
 use ash::extensions::ext;
@@ -26,6 +28,8 @@ pub struct VulkanRenderer {
     pub swapchain: RendererSwapchain,
     pub render_pass: vk::RenderPass,
     pub graphics_pipeline: RendererPipeline,
+    pub command_pools: CommandPools,
+    pub graphics_command_buffers: Vec<vk::CommandBuffer>,
 }
 
 impl VulkanRenderer {
@@ -79,6 +83,59 @@ impl VulkanRenderer {
 
         let graphics_pipeline = RendererPipeline::new(&main_device, swapchain.extent, render_pass)?;
 
+        let command_pools = CommandPools::new(&main_device)?;
+
+        let graphics_command_buffers = CommandPools::create_command_buffers(
+            &main_device,
+            command_pools.graphics,
+            swapchain.framebuffers.len() as u32
+        )?;
+
+        for (i, &command_buffer) in graphics_command_buffers.iter().enumerate() {
+            let begin_info = vk::CommandBufferBeginInfo::builder();
+
+            unsafe {
+                main_device.logical_device.begin_command_buffer(command_buffer, &begin_info)?
+            };
+
+            let clear_values = [
+                vk::ClearValue {
+                    color: vk::ClearColorValue {
+                        float32: [0.0, 0.0, 0.0, 1.0],
+                    }
+                },
+            ];
+
+            let render_pass_begin_info = vk::RenderPassBeginInfo::builder()
+                .render_pass(render_pass)
+                .framebuffer(swapchain.framebuffers[i])
+                .render_area(vk::Rect2D {
+                    offset: vk::Offset2D { x: 0, y: 0 },
+                    extent: swapchain.extent,
+                })
+                .clear_values(&clear_values);
+
+            unsafe {
+                main_device.logical_device.cmd_begin_render_pass(
+                    command_buffer,
+                    &render_pass_begin_info,
+                    vk::SubpassContents::INLINE,
+                );
+
+                main_device.logical_device.cmd_bind_pipeline(
+                    command_buffer,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    graphics_pipeline.pipeline,
+                );
+
+                main_device.logical_device.cmd_draw(command_buffer, 1, 1, 0, 0);
+
+                main_device.logical_device.cmd_end_render_pass(command_buffer);
+
+                main_device.logical_device.end_command_buffer(command_buffer)?;
+            };
+        }
+
         let renderer = Self {
             instance,
             debug,
@@ -87,6 +144,8 @@ impl VulkanRenderer {
             swapchain,
             render_pass,
             graphics_pipeline,
+            command_pools,
+            graphics_command_buffers,
         };
 
         Ok(renderer)
@@ -174,6 +233,8 @@ impl VulkanRenderer {
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
         unsafe {
+            self.command_pools.cleanup(&self.main_device);
+
             self.graphics_pipeline.cleanup(&self.main_device.logical_device);
 
             self.main_device.logical_device.destroy_render_pass(self.render_pass, None);

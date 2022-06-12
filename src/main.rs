@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 
 fn main() -> Result<()> {
     let _renderer = VulkanRenderer::new()
-        .context("Failed to create renderer");
+        .context("Failed to create renderer")?;
 
     Ok(())
 }

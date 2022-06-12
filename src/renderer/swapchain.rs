@@ -1,7 +1,7 @@
 use ash::vk;
 use ash::extensions::khr;
 
-use crate::renderer::device::{QueueFamily, RendererDevice};
+use crate::renderer::device::RendererDevice;
 use crate::renderer::window::RendererWindow;
 
 use anyhow::Result;
