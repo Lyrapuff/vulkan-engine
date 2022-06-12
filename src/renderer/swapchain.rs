@@ -1,7 +1,7 @@
 use ash::vk;
 use ash::extensions::khr;
 
-use crate::renderer::device::RendererDevice;
+use crate::renderer::device::{QueueFamily, RendererDevice};
 use crate::renderer::window::RendererWindow;
 
 use anyhow::Result;
@@ -22,7 +22,12 @@ impl RendererSwapchain {
     ) -> Result<RendererSwapchain> {
         // swapchain creation:
 
-        let queue_families = [device.graphics_queue_family];
+        let graphics_queue_family = match device.queue_family(vk::QueueFlags::GRAPHICS) {
+            None => panic!("No graphics queue family found, don't know what to do!"),
+            Some(qf) => qf
+        };
+
+        let queue_families = [graphics_queue_family.index];
 
         let capabilities = window.capabilities(device.physical_device)?;
 

@@ -2,11 +2,16 @@ use ash::vk;
 
 use anyhow::Result;
 
+pub struct QueueFamily {
+    pub index: u32,
+    pub flags: vk::QueueFlags,
+    pub queues: Vec<vk::Queue>,
+}
+
 pub struct RendererDevice {
     pub physical_device: vk::PhysicalDevice,
     pub logical_device: ash::Device,
-    pub graphics_queue_family: u32,
-    pub graphics_queue: vk::Queue,
+    pub queue_families: Vec<QueueFamily>,
 }
 
 impl RendererDevice {
@@ -25,37 +30,20 @@ impl RendererDevice {
             Some(pd) => pd
         };
 
-        let queue_family_props = unsafe {
-            instance.get_physical_device_queue_family_properties(physical_device)
-        };
-
-        let mut graphics_queue_found = None;
-
-        for (i, queue_family) in queue_family_props.iter().enumerate() {
-            if queue_family.queue_count <= 0 {
-                continue;
-            }
-
-            if queue_family.queue_flags.contains(vk::QueueFlags::GRAPHICS) {
-                graphics_queue_found = Some(i as u32);
-
-                break;
-            }
-        }
-
-        let graphics_queue_family = match graphics_queue_found {
-            None => return Ok(None),
-            Some(i) => i
-        };
+        let mut queue_families = Self::pick_queue_families(instance, physical_device);
 
         let priorities = [1.0f32];
 
-        let queue_infos: Vec<vk::DeviceQueueCreateInfo> = vec![
-            vk::DeviceQueueCreateInfo::builder()
-                .queue_family_index(graphics_queue_family)
-                .queue_priorities(&priorities)
-                .build()
-        ];
+        let mut queue_infos: Vec<vk::DeviceQueueCreateInfo> = Vec::with_capacity(queue_families.len());
+
+        for queue_family in &queue_families {
+            queue_infos.push(
+                vk::DeviceQueueCreateInfo::builder()
+                    .queue_family_index(queue_family.index)
+                    .queue_priorities(&priorities)
+                    .build()
+            )
+        }
 
         let used_extensions = Self::used_extensions();
 
@@ -68,19 +56,32 @@ impl RendererDevice {
             instance.create_device(physical_device, &device_create_info, None)?
         };
 
-        let graphics_queue = unsafe {
-            device.get_device_queue(graphics_queue_family, 0)
-        };
+        for queue_family in &mut queue_families {
+            unsafe {
+                queue_family.queues.push(device.get_device_queue(queue_family.index, 0));
+            };
+        }
 
         Ok(Some(RendererDevice {
             physical_device,
             logical_device: device,
-            graphics_queue,
-            graphics_queue_family,
+            queue_families,
         }))
     }
 
-    fn pick_physical_device(instance: &ash::Instance) -> Result<Option<vk::PhysicalDevice>>  {
+    pub fn queue_family(&self, flags: vk::QueueFlags) -> Option<&QueueFamily> {
+        for queue_family in &self.queue_families {
+            if queue_family.flags == flags {
+                return Some(queue_family)
+            }
+        }
+
+        None
+    }
+
+    fn pick_physical_device(
+        instance: &ash::Instance
+    ) -> Result<Option<vk::PhysicalDevice>>  {
         let physical_devices = unsafe {
             instance.enumerate_physical_devices()?
         };
@@ -92,6 +93,7 @@ impl RendererDevice {
                 instance.get_physical_device_properties(physical_device)
             };
 
+
             if props.device_type == vk::PhysicalDeviceType::DISCRETE_GPU {
                 chosen = Some(physical_device);
 
@@ -100,6 +102,35 @@ impl RendererDevice {
         }
 
         Ok(chosen)
+    }
+
+    fn pick_queue_families(
+        instance: &ash::Instance,
+        physical_device: vk::PhysicalDevice
+    ) -> Vec<QueueFamily> {
+        let queue_family_props = unsafe {
+            instance.get_physical_device_queue_family_properties(physical_device)
+        };
+
+        let mut queue_families: Vec<QueueFamily> = Vec::new();
+
+        for (i, queue_family) in queue_family_props.iter().enumerate() {
+            if queue_family.queue_count <= 0 {
+                continue;
+            }
+
+            if queue_family.queue_flags.contains(vk::QueueFlags::GRAPHICS) {
+                queue_families.push(QueueFamily {
+                    index: i as u32,
+                    flags: vk::QueueFlags::GRAPHICS,
+                    queues: vec![],
+                });
+
+                break;
+            }
+        }
+
+        queue_families
     }
 
     pub unsafe fn cleanup(&self) {
