@@ -1,4 +1,4 @@
-**Vulkan** Rendering Engine being written in **Rust** *that will possibly feature game engine capabilities*
+A **Vulkan** Rendering Engine that's being written in **Rust** and *that'll possibly feature game engine capabilities*
 
 ---
 
