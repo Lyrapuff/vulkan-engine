@@ -7,7 +7,7 @@ use winit::window::Window;
 use anyhow::Result;
 
 pub struct RendererWindow {
-    pub event_loop: EventLoop<()>,
+    pub event_loop: Option<EventLoop<()>>,
     pub window: Window,
     pub surface: vk::SurfaceKHR,
     pub surface_loader: khr::Surface,
@@ -34,7 +34,7 @@ impl RendererWindow {
         let surface_loader = khr::Surface::new(entry, instance);
 
         Ok(RendererWindow {
-            event_loop,
+            event_loop: Some(event_loop),
             window,
             surface,
             surface_loader

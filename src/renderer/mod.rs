@@ -19,6 +19,7 @@ use ash::extensions::ext;
 use std::ffi;
 
 use anyhow::Result;
+use winit::event::{Event, WindowEvent};
 
 pub struct VulkanRenderer {
     pub instance: ash::Instance,
@@ -91,51 +92,6 @@ impl VulkanRenderer {
             swapchain.framebuffers.len() as u32
         )?;
 
-        for (i, &command_buffer) in graphics_command_buffers.iter().enumerate() {
-            let begin_info = vk::CommandBufferBeginInfo::builder();
-
-            unsafe {
-                main_device.logical_device.begin_command_buffer(command_buffer, &begin_info)?
-            };
-
-            let clear_values = [
-                vk::ClearValue {
-                    color: vk::ClearColorValue {
-                        float32: [0.0, 0.0, 0.0, 1.0],
-                    }
-                },
-            ];
-
-            let render_pass_begin_info = vk::RenderPassBeginInfo::builder()
-                .render_pass(render_pass)
-                .framebuffer(swapchain.framebuffers[i])
-                .render_area(vk::Rect2D {
-                    offset: vk::Offset2D { x: 0, y: 0 },
-                    extent: swapchain.extent,
-                })
-                .clear_values(&clear_values);
-
-            unsafe {
-                main_device.logical_device.cmd_begin_render_pass(
-                    command_buffer,
-                    &render_pass_begin_info,
-                    vk::SubpassContents::INLINE,
-                );
-
-                main_device.logical_device.cmd_bind_pipeline(
-                    command_buffer,
-                    vk::PipelineBindPoint::GRAPHICS,
-                    graphics_pipeline.pipeline,
-                );
-
-                main_device.logical_device.cmd_draw(command_buffer, 1, 1, 0, 0);
-
-                main_device.logical_device.cmd_end_render_pass(command_buffer);
-
-                main_device.logical_device.end_command_buffer(command_buffer)?;
-            };
-        }
-
         let renderer = Self {
             instance,
             debug,
@@ -147,6 +103,8 @@ impl VulkanRenderer {
             command_pools,
             graphics_command_buffers,
         };
+
+        renderer.fill_command_buffers()?;
 
         Ok(renderer)
     }
@@ -228,11 +186,142 @@ impl VulkanRenderer {
 
         Ok(render_pass)
     }
+
+    fn fill_command_buffers(&self) -> Result<()> {
+        for (i, &command_buffer) in self.graphics_command_buffers.iter().enumerate() {
+            let begin_info = vk::CommandBufferBeginInfo::builder();
+
+            unsafe {
+                self.main_device.logical_device.begin_command_buffer(command_buffer, &begin_info)?
+            };
+
+            let clear_values = [
+                vk::ClearValue {
+                    color: vk::ClearColorValue {
+                        float32: [0.0, 0.0, 0.0, 1.0],
+                    }
+                },
+            ];
+
+            let render_pass_begin_info = vk::RenderPassBeginInfo::builder()
+                .render_pass(self.render_pass)
+                .framebuffer(self.swapchain.framebuffers[i])
+                .render_area(vk::Rect2D {
+                    offset: vk::Offset2D { x: 0, y: 0 },
+                    extent: self.swapchain.extent,
+                })
+                .clear_values(&clear_values);
+
+            unsafe {
+                self.main_device.logical_device.cmd_begin_render_pass(
+                    command_buffer,
+                    &render_pass_begin_info,
+                    vk::SubpassContents::INLINE,
+                );
+
+                self.main_device.logical_device.cmd_bind_pipeline(
+                    command_buffer,
+                    vk::PipelineBindPoint::GRAPHICS,
+                    self.graphics_pipeline.pipeline,
+                );
+
+                self.main_device.logical_device.cmd_draw(command_buffer, 3, 1, 0, 0);
+
+                self.main_device.logical_device.cmd_end_render_pass(command_buffer);
+
+                self.main_device.logical_device.end_command_buffer(command_buffer)?;
+            };
+        }
+
+        Ok(())
+    }
+
+    pub fn draw(mut self: Self) {
+        let event_loop = self.window.event_loop.take().unwrap();
+
+        event_loop.run(move |event, _, control_flow| {
+            match event {
+                Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    ..
+                } => {
+                    *control_flow = winit::event_loop::ControlFlow::Exit;
+                },
+                Event::RedrawRequested(_) => {
+                    self.swapchain.current_image = (self.swapchain.current_image + 1) % self.swapchain.image_count as usize;
+
+                    let (image_index, _) = unsafe {
+                        self.swapchain.swapchain_loader.acquire_next_image(
+                            self.swapchain.swapchain,
+                            u64::MAX,
+                            self.swapchain.image_available[self.swapchain.current_image],
+                            vk::Fence::null(),
+                        ).unwrap()
+                    };
+
+                    unsafe {
+                        let fences = [self.swapchain.may_begin_drawing[self.swapchain.current_image]];
+
+                        self.main_device.logical_device.wait_for_fences(
+                            &fences,
+                            true,
+                            u64::MAX,
+                        ).unwrap();
+
+                        self.main_device.logical_device.reset_fences(
+                            &fences,
+                        ).unwrap();
+                    };
+
+                    let semaphores_available = [self.swapchain.image_available[self.swapchain.current_image]];
+                    let waiting_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
+                    let semaphores_finished = [self.swapchain.rendering_finished[self.swapchain.current_image]];
+                    let command_buffers = [self.graphics_command_buffers[image_index as usize]];
+
+                    let submit_info = [
+                        vk::SubmitInfo::builder()
+                        .wait_semaphores(&semaphores_available)
+                        .wait_dst_stage_mask(&waiting_stages)
+                        .command_buffers(&command_buffers)
+                        .signal_semaphores(&semaphores_finished)
+                        .build()
+                    ];
+
+                    let graphics_queue = self.main_device.queue_family(vk::QueueFlags::GRAPHICS).unwrap().queues[0];
+
+                    unsafe {
+                        self.main_device.logical_device.queue_submit(
+                            graphics_queue,
+                            &submit_info,
+                            self.swapchain.may_begin_drawing[self.swapchain.current_image],
+                        ).unwrap();
+                    };
+
+                    let swapchains = [self.swapchain.swapchain];
+                    let indices = [image_index];
+
+                    let present_info = vk::PresentInfoKHR::builder()
+                        .wait_semaphores(&semaphores_finished)
+                        .swapchains(&swapchains)
+                        .image_indices(&indices);
+
+                    unsafe {
+                        self.swapchain.swapchain_loader
+                            .queue_present(graphics_queue, &present_info)
+                            .unwrap();
+                    };
+                },
+                _ => {}
+            }
+        });
+    }
 }
 
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
         unsafe {
+            self.main_device.logical_device.device_wait_idle().unwrap();
+
             self.command_pools.cleanup(&self.main_device);
 
             self.graphics_pipeline.cleanup(&self.main_device.logical_device);
