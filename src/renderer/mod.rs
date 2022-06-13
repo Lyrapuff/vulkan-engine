@@ -19,7 +19,6 @@ use ash::extensions::ext;
 use std::ffi;
 
 use anyhow::Result;
-use winit::event::{Event, WindowEvent};
 
 pub struct VulkanRenderer {
     pub instance: ash::Instance,
@@ -234,86 +233,6 @@ impl VulkanRenderer {
         }
 
         Ok(())
-    }
-
-    pub fn draw(mut self: Self) {
-        let event_loop = self.window.event_loop.take().unwrap();
-
-        event_loop.run(move |event, _, control_flow| {
-            match event {
-                Event::WindowEvent {
-                    event: WindowEvent::CloseRequested,
-                    ..
-                } => {
-                    *control_flow = winit::event_loop::ControlFlow::Exit;
-                },
-                Event::RedrawRequested(_) => {
-                    self.swapchain.current_image = (self.swapchain.current_image + 1) % self.swapchain.image_count as usize;
-
-                    let (image_index, _) = unsafe {
-                        self.swapchain.swapchain_loader.acquire_next_image(
-                            self.swapchain.swapchain,
-                            u64::MAX,
-                            self.swapchain.image_available[self.swapchain.current_image],
-                            vk::Fence::null(),
-                        ).unwrap()
-                    };
-
-                    unsafe {
-                        let fences = [self.swapchain.may_begin_drawing[self.swapchain.current_image]];
-
-                        self.main_device.logical_device.wait_for_fences(
-                            &fences,
-                            true,
-                            u64::MAX,
-                        ).unwrap();
-
-                        self.main_device.logical_device.reset_fences(
-                            &fences,
-                        ).unwrap();
-                    };
-
-                    let semaphores_available = [self.swapchain.image_available[self.swapchain.current_image]];
-                    let waiting_stages = [vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT];
-                    let semaphores_finished = [self.swapchain.rendering_finished[self.swapchain.current_image]];
-                    let command_buffers = [self.graphics_command_buffers[image_index as usize]];
-
-                    let submit_info = [
-                        vk::SubmitInfo::builder()
-                        .wait_semaphores(&semaphores_available)
-                        .wait_dst_stage_mask(&waiting_stages)
-                        .command_buffers(&command_buffers)
-                        .signal_semaphores(&semaphores_finished)
-                        .build()
-                    ];
-
-                    let graphics_queue = self.main_device.queue_family(vk::QueueFlags::GRAPHICS).unwrap().queues[0];
-
-                    unsafe {
-                        self.main_device.logical_device.queue_submit(
-                            graphics_queue,
-                            &submit_info,
-                            self.swapchain.may_begin_drawing[self.swapchain.current_image],
-                        ).unwrap();
-                    };
-
-                    let swapchains = [self.swapchain.swapchain];
-                    let indices = [image_index];
-
-                    let present_info = vk::PresentInfoKHR::builder()
-                        .wait_semaphores(&semaphores_finished)
-                        .swapchains(&swapchains)
-                        .image_indices(&indices);
-
-                    unsafe {
-                        self.swapchain.swapchain_loader
-                            .queue_present(graphics_queue, &present_info)
-                            .unwrap();
-                    };
-                },
-                _ => {}
-            }
-        });
     }
 }
 
