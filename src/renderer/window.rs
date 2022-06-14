@@ -45,6 +45,13 @@ impl RendererWindow {
         self.surface_loader.destroy_surface(self.surface, None);
     }
 
+    pub fn acquire_event_loop(&mut self) -> Result<EventLoop<()>> {
+        match self.event_loop.take() {
+            None => anyhow::bail!("EventLoop was acquired before"),
+            Some(el) => Ok(el)
+        }
+    }
+
     pub fn capabilities(
         &self,
         physical_device: vk::PhysicalDevice

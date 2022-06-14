@@ -18,8 +18,14 @@ impl RendererPipeline {
         extent: vk::Extent2D,
         render_pass: vk::RenderPass
     ) -> Result<RendererPipeline> {
-        let vert = Shader::from_code_vert(&device.logical_device, vk_shader_macros::include_glsl!("./shaders/default.vert"))?;
-        let frag = Shader::from_code_frag(&device.logical_device, vk_shader_macros::include_glsl!("./shaders/default.frag"))?;
+        let vert = Shader::from_code_vert(
+            &device.logical_device,
+            vk_shader_macros::include_glsl!("./shaders/default.vert")
+        )?;
+        let frag = Shader::from_code_frag(
+            &device.logical_device,
+            vk_shader_macros::include_glsl!("./shaders/default.frag")
+        )?;
 
         let entry_point = ffi::CString::new("main").unwrap();
 

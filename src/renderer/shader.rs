@@ -10,7 +10,11 @@ pub struct Shader {
 }
 
 impl Shader {
-    pub fn from_code(device: &ash::Device, code: &[u32], stage: vk::ShaderStageFlags) -> Result<Shader> {
+    pub fn from_code(
+        device: &ash::Device,
+        code: &[u32],
+        stage: vk::ShaderStageFlags
+    ) -> Result<Shader> {
         let shader_module_info = vk::ShaderModuleCreateInfo::builder()
             .code(code);
 

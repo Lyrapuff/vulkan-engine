@@ -11,7 +11,7 @@ use anyhow::Result;
 fn main() -> Result<()> {
     let mut renderer = VulkanRenderer::new()?;
 
-    let event_loop = renderer.window.event_loop.take().unwrap();
+    let event_loop = renderer.window.acquire_event_loop()?;
 
     let graphics_queue = match renderer.main_device.queue_family(vk::QueueFlags::GRAPHICS) {
         None => panic!("No graphics queue family found, don't know what to do!"),
@@ -27,7 +27,7 @@ fn main() -> Result<()> {
                 *control_flow = winit::event_loop::ControlFlow::Exit;
             },
             Event::RedrawRequested(_) => {
-                // getting current image:
+                // acquiring next image:
                 renderer.swapchain.current_image = (renderer.swapchain.current_image + 1) % renderer.swapchain.image_count as usize;
 
                 let (image_index, _) = unsafe {

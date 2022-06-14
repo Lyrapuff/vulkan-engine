@@ -15,6 +15,7 @@ use command_pools::CommandPools;
 
 use ash::vk;
 use ash::extensions::ext;
+use ash::extensions::khr;
 
 use std::ffi;
 
@@ -42,7 +43,7 @@ impl VulkanRenderer {
     fn used_extensions() -> Vec<*const i8> {
         vec![
             ext::DebugUtils::name().as_ptr(),
-            ash::extensions::khr::Surface::name().as_ptr(),
+            khr::Surface::name().as_ptr(),
         ]
     }
 
