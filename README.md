@@ -11,6 +11,7 @@
 - [x] Graphics pipeline
 - [x] Command Pools
 - [x] Command Buffer filling
+- [x] Synchronization and Presentation
 - [ ] Everything else
 ##### looks like this is going to be a pretty long list
 
