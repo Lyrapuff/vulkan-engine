@@ -1,5 +1,7 @@
 ## A `Vulkan` Engine that's being made with `Rust` and *that'll probably also be a game engine*
 
+### Videos
+- Drawing a triangle - https://www.youtube.com/watch?v=_PNiRGIAfY4
 
 ### Essential milestones
 - [x] Instance creation
