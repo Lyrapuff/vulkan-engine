@@ -25,12 +25,6 @@ checksum = "bb07d2053ccdbe10e2af2995a2f116c1330396493dc1269f6a91d0ae82e19704"
 
 [[package]]
 name = "ash"
-version = "0.36.0+1.3.206"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ceea9c64653169f33f946debf0a41568afc4e23a4c37d29004a23b2ffbfb4034"
-
-[[package]]
-name = "ash"
 version = "0.37.0+1.3.209"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "006ca68e0f2b03f22d6fa9f2860f85aed430d257fec20f8879b2145e7c7ae1a6"
@@ -41,7 +35,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e199a4119a1695c8d865b3f5d6c1ee164370c0c5bc91c8284cf79b0f0be78ba"
 dependencies = [
- "ash 0.37.0+1.3.209",
+ "ash",
  "raw-window-handle 0.3.4",
  "raw-window-metal",
 ]
@@ -326,15 +320,15 @@ checksum = "78cc372d058dcf6d5ecd98510e7fbc9e5aec4d21de70f65fea8fecebcd881bd4"
 
 [[package]]
 name = "gpu-allocator"
-version = "0.17.0"
+version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ed7426eb788ccc1ad2f36294b038ea3d7aeec07da949d01221204f85e373439"
+checksum = "dd070a889c24332ca2408ef95cea3b6135fe6be5fb48bef02e274242dce2a8d8"
 dependencies = [
- "ash 0.36.0+1.3.206",
+ "ash",
  "backtrace",
  "log",
  "thiserror",
- "winapi",
+ "windows",
 ]
 
 [[package]]
@@ -835,7 +829,7 @@ name = "vulkan-video"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ash 0.37.0+1.3.209",
+ "ash",
  "ash-window",
  "gpu-allocator",
  "vk-shader-macros",
@@ -1006,6 +1000,19 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "windows"
+version = "0.36.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e53b97a83176b369b0eb2fd8158d4ae215357d02df9d40c1e1bf1879c5482c80"
+dependencies = [
+ "windows_aarch64_msvc",
+ "windows_i686_gnu",
+ "windows_i686_msvc",
+ "windows_x86_64_gnu",
+ "windows_x86_64_msvc",
+]
 
 [[package]]
 name = "windows-sys"

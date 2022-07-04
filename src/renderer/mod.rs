@@ -5,6 +5,7 @@ pub mod swapchain;
 pub mod pipeline;
 pub mod shader;
 pub mod command_pools;
+pub mod allocator;
 
 use debug::RendererDebug;
 use device::RendererDevice;
@@ -12,6 +13,7 @@ use window::RendererWindow;
 use swapchain::RendererSwapchain;
 use pipeline::RendererPipeline;
 use command_pools::CommandPools;
+use allocator::RendererAllocator;
 
 use ash::vk;
 use ash::extensions::ext;
@@ -31,6 +33,7 @@ pub struct VulkanRenderer {
     pub graphics_pipeline: RendererPipeline,
     pub command_pools: CommandPools,
     pub graphics_command_buffers: Vec<vk::CommandBuffer>,
+    pub allocator: RendererAllocator,
 }
 
 impl VulkanRenderer {
@@ -92,6 +95,16 @@ impl VulkanRenderer {
             swapchain.framebuffers.len() as u32
         )?;
 
+        let allocator_desc = gpu_allocator::vulkan::AllocatorCreateDesc {
+           instance: instance.clone(), 
+           device: main_device.logical_device.clone(),
+           physical_device: main_device.physical_device.clone(),
+           debug_settings: Default::default(),
+           buffer_device_address: true,
+        };
+
+        let allocator = RendererAllocator::new(&allocator_desc)?;
+
         let renderer = Self {
             instance,
             debug,
@@ -102,6 +115,7 @@ impl VulkanRenderer {
             graphics_pipeline,
             command_pools,
             graphics_command_buffers,
+            allocator,
         };
 
         renderer.fill_command_buffers()?;
