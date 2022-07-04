@@ -61,7 +61,7 @@ impl VulkanRenderer {
         let mut used_extensions = Self::used_extensions();
 
         for ext_name in ash_window::enumerate_required_extensions(&window)? {
-            used_extensions.push(ext_name.as_ptr());
+            used_extensions.push(*ext_name);
         }
 
         let entry = ash::Entry::linked();

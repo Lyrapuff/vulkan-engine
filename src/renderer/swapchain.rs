@@ -160,6 +160,10 @@ impl RendererSwapchain {
         Ok(())
     }
 
+    pub fn bump_current_image(&mut self) {
+        self.current_image = (self.current_image + 1) % self.image_count as usize;
+    }
+
     pub fn create_framebuffers(&mut self, device: &RendererDevice, render_pass: vk::RenderPass) -> Result<()> {
         for image_view in &self.image_views {
             let image_view = [*image_view];

@@ -28,7 +28,7 @@ fn main() -> Result<()> {
             },
             Event::RedrawRequested(_) => {
                 // acquiring next image:
-                renderer.swapchain.current_image = (renderer.swapchain.current_image + 1) % renderer.swapchain.image_count as usize;
+                renderer.swapchain.bump_current_image();
 
                 let (image_index, _) = unsafe {
                     renderer.swapchain.swapchain_loader.acquire_next_image(

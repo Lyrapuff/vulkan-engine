@@ -19,9 +19,9 @@ checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
 name = "anyhow"
-version = "1.0.57"
+version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
+checksum = "bb07d2053ccdbe10e2af2995a2f116c1330396493dc1269f6a91d0ae82e19704"
 
 [[package]]
 name = "ash"
@@ -30,12 +30,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ceea9c64653169f33f946debf0a41568afc4e23a4c37d29004a23b2ffbfb4034"
 
 [[package]]
-name = "ash-window"
-version = "0.9.1"
+name = "ash"
+version = "0.37.0+1.3.209"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed540473cca5a9a40466521ec2fd0cfe5083173bf736a15a4580be523842ff93"
+checksum = "006ca68e0f2b03f22d6fa9f2860f85aed430d257fec20f8879b2145e7c7ae1a6"
+
+[[package]]
+name = "ash-window"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e199a4119a1695c8d865b3f5d6c1ee164370c0c5bc91c8284cf79b0f0be78ba"
 dependencies = [
- "ash",
+ "ash 0.37.0+1.3.209",
  "raw-window-handle 0.3.4",
  "raw-window-metal",
 ]
@@ -324,7 +330,7 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ed7426eb788ccc1ad2f36294b038ea3d7aeec07da949d01221204f85e373439"
 dependencies = [
- "ash",
+ "ash 0.36.0+1.3.206",
  "backtrace",
  "log",
  "thiserror",
@@ -829,7 +835,7 @@ name = "vulkan-video"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ash",
+ "ash 0.37.0+1.3.209",
  "ash-window",
  "gpu-allocator",
  "vk-shader-macros",
