@@ -6,6 +6,8 @@ pub mod pipeline;
 pub mod shader;
 pub mod command_pools;
 pub mod allocator;
+pub mod mesh;
+pub mod buffer;
 
 use debug::RendererDebug;
 use device::RendererDevice;
@@ -98,7 +100,7 @@ impl VulkanRenderer {
         let allocator_desc = gpu_allocator::vulkan::AllocatorCreateDesc {
            instance: instance.clone(), 
            device: main_device.logical_device.clone(),
-           physical_device: main_device.physical_device.clone(),
+           physical_device: main_device.physical_device,
            debug_settings: Default::default(),
            buffer_device_address: true,
         };

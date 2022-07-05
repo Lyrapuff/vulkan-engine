@@ -6,11 +6,9 @@ authors = ["小鳥 <lyrapuff@gmail.com>"]
 
 [dependencies]
 anyhow = "1.0.58"
-
 ash = { version = "0.37.0", default-features = false, features = ["linked", "debug"] }
 vk-shader-macros = "0.2.8"
 ash-window = "0.10.0"
-
 winit = "0.26.1"
-
+nalgebra = "0.31.0"
 gpu-allocator = "0.18.0"
