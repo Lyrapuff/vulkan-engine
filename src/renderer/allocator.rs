@@ -21,6 +21,12 @@ impl RendererAllocator {
         })
     }
 
+    pub fn free(&mut self, allocation: Allocation) -> Result<()> {
+        self.allocator.free(allocation)?;
+
+        Ok(())
+    }
+
     pub fn allocate_buffer(
         &mut self,
         buffer_info: vk::BufferCreateInfo,
@@ -50,7 +56,7 @@ impl RendererAllocator {
 
         Ok(AllocatedBuffer {
             buffer,
-            allocation,
+            allocation: Some(allocation),
         })
     }
 

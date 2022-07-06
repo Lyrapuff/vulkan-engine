@@ -103,14 +103,14 @@ impl VulkanRenderer {
         )?;
 
         let allocator_desc = gpu_allocator::vulkan::AllocatorCreateDesc {
-           instance: instance.clone(), 
+           instance: instance.clone(),
            device: main_device.logical_device.clone(),
            physical_device: main_device.physical_device,
            debug_settings: Default::default(),
-           buffer_device_address: true,
+           buffer_device_address: false,
         };
 
-        let allocator = RendererAllocator::new(&allocator_desc)?;
+        let mut allocator = RendererAllocator::new(&allocator_desc)?;
 
         let mut triangle = Mesh::empty();
 
@@ -131,6 +131,8 @@ impl VulkanRenderer {
             na::Vector3::identity(),
             na::Vector3::new(0.0, 1.0, 0.0),
         ));
+
+        triangle.upload(&main_device.logical_device, &mut allocator)?;
 
         let renderer = Self {
             instance,
@@ -281,6 +283,8 @@ impl VulkanRenderer {
 
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
+        self.triangle_mesh.cleanup(&self.main_device.logical_device, &mut self.allocator);
+
         self.allocator.cleanup();
 
         unsafe {

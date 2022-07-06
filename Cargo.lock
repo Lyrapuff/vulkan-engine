@@ -962,6 +962,7 @@ dependencies = [
  "ash",
  "ash-window",
  "gpu-allocator",
+ "memoffset",
  "nalgebra",
  "vk-shader-macros",
  "winit",
