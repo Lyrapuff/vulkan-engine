@@ -16,12 +16,16 @@ use swapchain::RendererSwapchain;
 use pipeline::RendererPipeline;
 use command_pools::CommandPools;
 use allocator::RendererAllocator;
+use mesh::Mesh;
+use mesh::Vertex;
 
 use ash::vk;
 use ash::extensions::ext;
 use ash::extensions::khr;
 
 use std::ffi;
+
+use nalgebra as na;
 
 use anyhow::Result;
 
@@ -36,6 +40,7 @@ pub struct VulkanRenderer {
     pub command_pools: CommandPools,
     pub graphics_command_buffers: Vec<vk::CommandBuffer>,
     pub allocator: RendererAllocator,
+    pub triangle_mesh: Mesh,
 }
 
 impl VulkanRenderer {
@@ -107,6 +112,26 @@ impl VulkanRenderer {
 
         let allocator = RendererAllocator::new(&allocator_desc)?;
 
+        let mut triangle = Mesh::empty();
+
+        triangle.vertices.push(Vertex::with(
+            na::Vector3::new(1.0, 1.0, 0.0),
+            na::Vector3::identity(),
+            na::Vector3::new(0.0, 1.0, 0.0),
+        ));
+
+        triangle.vertices.push(Vertex::with(
+            na::Vector3::new(-1.0, 1.0, 0.0),
+            na::Vector3::identity(),
+            na::Vector3::new(0.0, 1.0, 0.0),
+        ));
+
+        triangle.vertices.push(Vertex::with(
+            na::Vector3::new(0.0, -1.0, 0.0),
+            na::Vector3::identity(),
+            na::Vector3::new(0.0, 1.0, 0.0),
+        ));
+
         let renderer = Self {
             instance,
             debug,
@@ -118,6 +143,7 @@ impl VulkanRenderer {
             command_pools,
             graphics_command_buffers,
             allocator,
+            triangle_mesh: triangle,
         };
 
         renderer.fill_command_buffers()?;
@@ -255,6 +281,8 @@ impl VulkanRenderer {
 
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
+        self.allocator.cleanup();
+
         unsafe {
             self.main_device.logical_device.device_wait_idle().unwrap();
 
