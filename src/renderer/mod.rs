@@ -18,10 +18,13 @@ use command_pools::CommandPools;
 use allocator::RendererAllocator;
 use mesh::Mesh;
 use mesh::Vertex;
+use shader::Shader;
 
 use ash::vk;
 use ash::extensions::ext;
 use ash::extensions::khr;
+
+use vk_shader_macros::include_glsl;
 
 use std::ffi;
 
@@ -92,7 +95,14 @@ impl VulkanRenderer {
         let mut swapchain = RendererSwapchain::new(&instance, &main_device, &window)?;
         swapchain.create_framebuffers(&main_device, render_pass)?;
 
-        let graphics_pipeline = RendererPipeline::new(&main_device, swapchain.extent, render_pass)?;
+        let vertex_desc = Vertex::input_description();
+
+        let graphics_pipeline = RendererPipeline::builder(&main_device, swapchain.extent, render_pass)
+            .shader(Shader::from_code_vert(&main_device.logical_device, include_glsl!("shaders/tri_mesh.vert"))?)
+            .shader(Shader::from_code_frag(&main_device.logical_device, include_glsl!("shaders/tri_mesh.frag"))?)
+            .bindings(&vertex_desc.bindings)
+            .attributes(&vertex_desc.attributes)
+            .build()?;
 
         let command_pools = CommandPools::new(&main_device)?;
 
@@ -269,7 +279,9 @@ impl VulkanRenderer {
                     self.graphics_pipeline.pipeline,
                 );
 
-                self.main_device.logical_device.cmd_draw(command_buffer, 3, 1, 0, 0);
+                self.main_device.logical_device.cmd_bind_vertex_buffers(command_buffer, 0, &[self.triangle_mesh.vertex_buffer.as_ref().unwrap().buffer], &[0]);
+
+                self.main_device.logical_device.cmd_draw(command_buffer, self.triangle_mesh.vertices.len() as u32, 1, 0, 0);
 
                 self.main_device.logical_device.cmd_end_render_pass(command_buffer);
 

@@ -7,55 +7,112 @@ use std::ffi;
 
 use anyhow::Result;
 
+pub struct PipelineBuilder<'a> {
+    device: &'a RendererDevice,
+    extent: vk::Extent2D,
+    render_pass: vk::RenderPass,
+    shaders: Vec<Shader>,
+    bindings: Vec<vk::VertexInputBindingDescription>,
+    attributes: Vec<vk::VertexInputAttributeDescription>,
+}
+
+impl<'a> PipelineBuilder<'a> {
+    pub fn device(&mut self, device: &'a RendererDevice) -> &mut Self {
+        self.device = device;
+        self
+    }
+
+    pub fn extent(&mut self, extent: vk::Extent2D) -> &mut Self {
+        self.extent = extent;
+        self
+    }
+
+    pub fn render_pass(&mut self, render_pass: vk::RenderPass) -> &mut Self {
+        self.render_pass = render_pass;
+        self
+    }
+
+    pub fn shader(&mut self, shader: Shader) -> &mut Self {
+        self.shaders.push(shader);
+        self
+    }
+
+    pub fn binding(&mut self, binding: vk::VertexInputBindingDescription) -> &mut Self {
+        self.bindings.push(binding);
+        self
+    }
+
+    pub fn bindings(&mut self, bindings: &[vk::VertexInputBindingDescription]) -> &mut Self {
+        self.bindings.extend_from_slice(bindings);
+        self
+    }
+
+    pub fn attribute(&mut self, attribute: vk::VertexInputAttributeDescription) -> &mut Self {
+        self.attributes.push(attribute);
+        self
+    }
+
+    pub fn attributes(&mut self, attributes: &[vk::VertexInputAttributeDescription]) -> &mut Self {
+        self.attributes.extend_from_slice(attributes);
+        self
+    }
+
+    pub fn build(&self) -> Result<RendererPipeline> {
+        let entry_point = ffi::CString::new("main").unwrap();
+
+        let mut shader_stages = vec![];
+
+        for shader in &self.shaders {
+            shader_stages.push(shader.shader_stage(&entry_point));
+        }
+
+        let input_info = vk::PipelineVertexInputStateCreateInfo::builder()
+            .vertex_binding_descriptions(&self.bindings)
+            .vertex_attribute_descriptions(&self.attributes);
+
+        let (pipeline_layout, pipeline) = RendererPipeline::create_graphics_pipeline(
+            &self.device.logical_device,
+            self.render_pass,
+            self.extent,
+            input_info,
+            &shader_stages,
+        )?;
+
+        for shader in &self.shaders {
+            unsafe {
+                shader.cleanup(&self.device.logical_device);
+            }
+        }
+
+        Ok(RendererPipeline {
+            pipeline_layout,
+            pipeline,
+        })
+    }
+}
+
 pub struct RendererPipeline {
     pub pipeline: vk::Pipeline,
     pub pipeline_layout: vk::PipelineLayout,
 }
 
 impl RendererPipeline {
-    pub fn new(
+    pub fn builder(
         device: &RendererDevice,
         extent: vk::Extent2D,
-        render_pass: vk::RenderPass
-    ) -> Result<RendererPipeline> {
-        let vert = Shader::from_code_vert(
-            &device.logical_device,
-            vk_shader_macros::include_glsl!("./shaders/default.vert")
-        )?;
-        let frag = Shader::from_code_frag(
-            &device.logical_device,
-            vk_shader_macros::include_glsl!("./shaders/default.frag")
-        )?;
-
-        let entry_point = ffi::CString::new("main").unwrap();
-
-        let shader_stages = [
-            vert.shader_stage(&entry_point),
-            frag.shader_stage(&entry_point),
-        ];
-
-        let vertex_input_info = vk::PipelineVertexInputStateCreateInfo::builder();
-
-        let (pipeline_layout, pipeline) = Self::create_graphics_pipeline(
-            &device.logical_device,
-            render_pass,
+        render_pass: vk::RenderPass,
+    ) -> PipelineBuilder {
+        PipelineBuilder {
+            device,
             extent,
-            vertex_input_info,
-            &shader_stages
-        )?;
-
-        unsafe {
-            vert.cleanup(&device.logical_device);
-            frag.cleanup(&device.logical_device);
+            render_pass,
+            shaders: vec![],
+            bindings: vec![],
+            attributes: vec![],
         }
-
-        Ok(RendererPipeline {
-            pipeline,
-            pipeline_layout,
-        })
     }
 
-    fn create_graphics_pipeline(
+    pub fn create_graphics_pipeline(
         device: &ash::Device,
         render_pass: vk::RenderPass,
         extent: vk::Extent2D,

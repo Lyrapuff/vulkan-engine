@@ -9,9 +9,9 @@ use crate::renderer::buffer::AllocatedBuffer;
 use anyhow::Result;
 
 pub struct VertexInputDescription {
-    bindings: Vec<vk::VertexInputBindingDescription>,
-    attributes: Vec<vk::VertexInputAttributeDescription>,
-    flags: vk::PipelineVertexInputStateCreateFlags,
+    pub bindings: Vec<vk::VertexInputBindingDescription>,
+    pub attributes: Vec<vk::VertexInputAttributeDescription>,
+    pub flags: vk::PipelineVertexInputStateCreateFlags,
 }
 
 #[repr(C)]
@@ -30,7 +30,7 @@ impl Vertex {
         }
     }
 
-    pub fn vertex_description(&self) -> VertexInputDescription {
+    pub fn input_description() -> VertexInputDescription {
         let mut bindings = Vec::new();
         let mut attributes = Vec::new();
 
