@@ -44,7 +44,7 @@ pub struct VulkanRenderer {
     pub command_pools: CommandPools,
     pub graphics_command_buffers: Vec<vk::CommandBuffer>,
     pub allocator: RendererAllocator,
-    pub triangle_mesh: Mesh,
+    pub meshes: Vec<Mesh>,
 }
 
 impl VulkanRenderer {
@@ -128,7 +128,7 @@ impl VulkanRenderer {
         triangle.vertices.push(Vertex::with(
             na::Vector3::new(1.0, 1.0, 0.0),
             na::Vector3::identity(),
-            na::Vector3::new(0.0, 1.0, 0.0),
+            na::Vector3::new(1.0, 0.0, 0.0),
         ));
 
         triangle.vertices.push(Vertex::with(
@@ -140,7 +140,7 @@ impl VulkanRenderer {
         triangle.vertices.push(Vertex::with(
             na::Vector3::new(0.0, -1.0, 0.0),
             na::Vector3::identity(),
-            na::Vector3::new(0.0, 1.0, 0.0),
+            na::Vector3::new(0.0, 0.0, 1.0),
         ));
 
         triangle.upload(&main_device.logical_device, &mut allocator)?;
@@ -156,7 +156,9 @@ impl VulkanRenderer {
             command_pools,
             graphics_command_buffers,
             allocator,
-            triangle_mesh: triangle,
+            meshes: vec![
+                triangle,
+            ],
         };
 
         renderer.fill_command_buffers()?;
@@ -280,9 +282,11 @@ impl VulkanRenderer {
                     self.graphics_pipeline.pipeline,
                 );
 
-                self.main_device.logical_device.cmd_bind_vertex_buffers(command_buffer, 0, &[self.triangle_mesh.vertex_buffer.as_ref().unwrap().buffer], &[0]);
+                for mesh in &self.meshes {
+                    self.main_device.logical_device.cmd_bind_vertex_buffers(command_buffer, 0, &[mesh.vertex_buffer.as_ref().unwrap().buffer], &[0]);
+                }
 
-                self.main_device.logical_device.cmd_draw(command_buffer, self.triangle_mesh.vertices.len() as u32, 1, 0, 0);
+                self.main_device.logical_device.cmd_draw(command_buffer, self.meshes.iter().map(|mesh| mesh.vertices.len()).sum::<usize>() as u32, 1, 0, 0);
 
                 self.main_device.logical_device.cmd_end_render_pass(command_buffer);
 
@@ -296,7 +300,9 @@ impl VulkanRenderer {
 
 impl Drop for VulkanRenderer {
     fn drop(&mut self) {
-        self.triangle_mesh.cleanup(&self.main_device.logical_device, &mut self.allocator);
+        for mesh in &mut self.meshes {
+            mesh.cleanup(&self.main_device.logical_device, &mut self.allocator);
+        }
 
         self.allocator.cleanup();
 
