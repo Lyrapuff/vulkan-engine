@@ -19,6 +19,7 @@ use allocator::RendererAllocator;
 use mesh::Mesh;
 use mesh::Vertex;
 use shader::Shader;
+use shader::shader;
 
 use ash::vk;
 use ash::extensions::ext;
@@ -98,8 +99,8 @@ impl VulkanRenderer {
         let vertex_desc = Vertex::input_description();
 
         let graphics_pipeline = RendererPipeline::builder(&main_device, swapchain.extent, render_pass)
-            .shader(Shader::from_code_vert(&main_device.logical_device, include_glsl!("shaders/tri_mesh.vert"))?)
-            .shader(Shader::from_code_frag(&main_device.logical_device, include_glsl!("shaders/tri_mesh.frag"))?)
+            .shader(shader!(&main_device.logical_device, "shaders/tri_mesh.vert"))
+            .shader(shader!(&main_device.logical_device, "shaders/tri_mesh.frag"))
             .bindings(&vertex_desc.bindings)
             .attributes(&vertex_desc.attributes)
             .build()?;

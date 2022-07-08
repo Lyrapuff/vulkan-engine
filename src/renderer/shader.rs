@@ -2,7 +2,21 @@ use ash::vk;
 
 use std::ffi;
 
+use vk_shader_macros::include_glsl;
+
 use anyhow::Result;
+
+macro_rules! shader {
+    ($device:expr, $path:tt) => {
+        if format!("{}", $path).contains("frag") {
+            Shader::from_code_frag($device, include_glsl!($path))?
+        } else {
+            Shader::from_code_vert($device, include_glsl!($path))?
+        }
+    }
+}
+
+pub(crate) use shader;
 
 pub struct Shader {
     pub shader_module: vk::ShaderModule,
