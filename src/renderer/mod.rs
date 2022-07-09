@@ -18,6 +18,7 @@ use command_pools::CommandPools;
 use allocator::RendererAllocator;
 use mesh::Mesh;
 use mesh::Vertex;
+use mesh::MeshPushConstants;
 use shader::Shader;
 use shader::shader;
 
@@ -98,11 +99,14 @@ impl VulkanRenderer {
 
         let vertex_desc = Vertex::input_description();
 
+        let push_constant_desc = MeshPushConstants::description(0, vk::ShaderStageFlags::VERTEX);
+
         let graphics_pipeline = RendererPipeline::builder(&main_device, swapchain.extent, render_pass)
             .shader(shader!(&main_device.logical_device, "shaders/tri_mesh.vert"))
             .shader(shader!(&main_device.logical_device, "shaders/tri_mesh.frag"))
             .bindings(&vertex_desc.bindings)
             .attributes(&vertex_desc.attributes)
+            .push_constants(vec![push_constant_desc])
             .build()?;
 
         let command_pools = CommandPools::new(&main_device)?;

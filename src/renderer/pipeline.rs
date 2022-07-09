@@ -2,6 +2,7 @@ use ash::vk;
 
 use crate::renderer::device::RendererDevice;
 use crate::renderer::shader::Shader;
+use crate::renderer::mesh::{PushConstantDescription, VertexInputDescription};
 
 use std::ffi;
 
@@ -14,6 +15,7 @@ pub struct PipelineBuilder<'a> {
     shaders: Vec<Shader>,
     bindings: Vec<vk::VertexInputBindingDescription>,
     attributes: Vec<vk::VertexInputAttributeDescription>,
+    push_constants: Vec<PushConstantDescription>, 
 }
 
 impl<'a> PipelineBuilder<'a> {
@@ -57,6 +59,11 @@ impl<'a> PipelineBuilder<'a> {
         self
     }
 
+    pub fn push_constants(&mut self, push_constants: Vec<PushConstantDescription>) -> &mut Self {
+        self.push_constants.extend(push_constants);
+        self
+    }
+
     pub fn build(&self) -> Result<RendererPipeline> {
         let entry_point = ffi::CString::new("main").unwrap();
 
@@ -76,6 +83,7 @@ impl<'a> PipelineBuilder<'a> {
             self.extent,
             input_info,
             &shader_stages,
+            &self.push_constants,
         )?;
 
         for shader in &self.shaders {
@@ -109,6 +117,7 @@ impl RendererPipeline {
             shaders: vec![],
             bindings: vec![],
             attributes: vec![],
+            push_constants: vec![],
         }
     }
 
@@ -117,7 +126,8 @@ impl RendererPipeline {
         render_pass: vk::RenderPass,
         extent: vk::Extent2D,
         vertex_input_info: vk::PipelineVertexInputStateCreateInfoBuilder,
-        shader_stages: &[vk::PipelineShaderStageCreateInfo]
+        shader_stages: &[vk::PipelineShaderStageCreateInfo],
+        push_constants: &[PushConstantDescription],
     ) -> Result<(vk::PipelineLayout, vk::Pipeline)> {
         // input:
 
@@ -187,12 +197,29 @@ impl RendererPipeline {
         let color_blend_info = vk::PipelineColorBlendStateCreateInfo::builder()
             .attachments(&color_blend_attachments);
 
-        // pipeline:
+        // push contants:
 
-        let pipeline_layout_info = vk::PipelineLayoutCreateInfo::builder();
+        let mut push_constant_ranges = vec![];
+
+        for push_constant in push_constants {
+           push_constant_ranges.push(vk::PushConstantRange::builder()
+               .offset(push_constant.offset)
+               .size(push_constant.size)
+               .stage_flags(push_constant.stage_flags)
+               .build()
+           );
+        }
+
+        // pipeline layout:
+
+        let pipeline_layout_info = vk::PipelineLayoutCreateInfo::builder()
+            .push_constant_ranges(&push_constant_ranges);
+
         let pipeline_layout = unsafe {
             device.create_pipeline_layout(&pipeline_layout_info, None)?
         };
+
+        // pipeline:
 
         let pipeline_info = vk::GraphicsPipelineCreateInfo::builder()
             .stages(shader_stages)

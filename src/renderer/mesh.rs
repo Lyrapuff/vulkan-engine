@@ -73,6 +73,30 @@ impl Vertex {
     }
 }
 
+pub struct PushConstantDescription {
+    pub offset: u32,
+    pub size: u32,
+    pub stage_flags: vk::ShaderStageFlags,
+}
+
+#[repr(C)]
+pub struct MeshPushConstants {
+    data: na::Vector4<f32>,
+    render_matrix: na::Matrix4<f32>,
+}
+
+impl MeshPushConstants {
+    pub fn description(offset: u32, stage_flags: vk::ShaderStageFlags) -> PushConstantDescription {
+        let size = std::mem::size_of::<Self>() as u32;
+
+        PushConstantDescription {
+            offset,
+            size,
+            stage_flags,
+        }
+    }
+}
+
 pub struct Mesh {
     pub vertices: Vec<Vertex>,
     pub vertex_buffer: Option<AllocatedBuffer>,
