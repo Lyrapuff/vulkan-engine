@@ -112,7 +112,7 @@ impl Mesh {
 
     pub fn upload(&mut self, device: &ash::Device, allocator: &mut RendererAllocator) -> Result<()> {
         if let Some(buffer) = &mut self.vertex_buffer.take() {
-            buffer.cleanup(device, allocator);
+            buffer.cleanup(device, allocator)?;
         }
 
         let size = (self.vertices.len() * std::mem::size_of::<Vertex>()) as u64;
